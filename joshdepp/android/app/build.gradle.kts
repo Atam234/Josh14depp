@@ -34,6 +34,10 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+            // Code shrinking breaks ML Kit's face detector (it strips classes
+            // the detector looks up at runtime), so it stays off.
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }
