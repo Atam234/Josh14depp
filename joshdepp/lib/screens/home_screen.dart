@@ -9,6 +9,7 @@ import 'live_swap_screen.dart';
 import 'photo_swap_screen.dart';
 import 'result_screen.dart';
 import 'source_picker.dart';
+import 'video_swap_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -113,16 +114,30 @@ class HomeScreen extends StatelessWidget {
                     Expanded(
                       child: BlobCard(
                         seed: 2,
-                        onTap: () => chooseSourceFace(context),
-                        child: _TileContent(
-                          title: 'Source\nFace',
-                          icon: app.hasSource
-                              ? Icons.how_to_reg_rounded
-                              : Icons.person_add_alt_1_rounded,
+                        onTap: () => _open(context, const VideoSwapScreen()),
+                        child: const _TileContent(
+                          title: 'Video\nSwap',
+                          icon: Icons.movie_filter_rounded,
                         ),
                       ),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 104,
+                child: BlobCard(
+                  onTap: () => chooseSourceFace(context),
+                  child: _TileContent(
+                    title: 'Source Face',
+                    caption: app.hasSource
+                        ? 'Ready. Tap to change'
+                        : 'Choose whose face to put in',
+                    icon: app.hasSource
+                        ? Icons.how_to_reg_rounded
+                        : Icons.person_add_alt_1_rounded,
+                  ),
                 ),
               ),
               const SectionTitle('Recent swaps'),
@@ -283,8 +298,17 @@ String formatWhen(DateTime time) {
   return '${months[time.month - 1]} ${time.day}, ${time.year} - $hour:$minute $half';
 }
 
-String formatMillis(int millis) =>
-    millis >= 1000 ? '${(millis / 1000).toStringAsFixed(1)} s' : '$millis ms';
+String formatMillis(int millis) => millis >= 60000
+    ? '${(millis / 60000).toStringAsFixed(1)} min'
+    : millis >= 1000
+    ? '${(millis / 1000).toStringAsFixed(1)} s'
+    : '$millis ms';
+
+String recordTitle(SwapRecord record) => record.isVideo
+    ? 'Video Swap'
+    : record.live
+    ? 'Live Swap'
+    : 'Photo Swap';
 
 class _RecordCard extends StatelessWidget {
   const _RecordCard({required this.record});
@@ -319,7 +343,9 @@ class _RecordCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          record.live
+                          record.isVideo
+                              ? Icons.movie_rounded
+                              : record.live
                               ? Icons.videocam_rounded
                               : Icons.photo_rounded,
                           color: Palette.lime,
@@ -327,7 +353,7 @@ class _RecordCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          record.live ? 'Live Swap' : 'Photo Swap',
+                          recordTitle(record),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w500,
@@ -337,7 +363,9 @@ class _RecordCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      record.live
+                      record.isVideo
+                          ? '${record.faces} frames · ${formatMillis(record.millis)}'
+                          : record.live
                           ? '${record.faces} ${record.faces == 1 ? 'face' : 'faces'}'
                           : '${record.faces} ${record.faces == 1 ? 'face' : 'faces'} · ${formatMillis(record.millis)}',
                       style: const TextStyle(

@@ -19,6 +19,7 @@ class SwapRecord {
     required this.millis,
     required this.faces,
     required this.live,
+    this.videoPath,
   });
 
   final String path;
@@ -27,12 +28,18 @@ class SwapRecord {
   final int faces;
   final bool live;
 
+  /// Set for video swaps; [path] is then the thumbnail.
+  final String? videoPath;
+
+  bool get isVideo => videoPath != null;
+
   Map<String, Object> toJson() => {
     'path': path,
     'time': time.millisecondsSinceEpoch,
     'millis': millis,
     'faces': faces,
     'live': live,
+    'video': ?videoPath,
   };
 
   static SwapRecord fromJson(Map<String, dynamic> json) => SwapRecord(
@@ -41,6 +48,7 @@ class SwapRecord {
     millis: json['millis'] as int,
     faces: json['faces'] as int,
     live: json['live'] as bool,
+    videoPath: json['video'] as String?,
   );
 }
 
@@ -140,6 +148,41 @@ class AppState extends ChangeNotifier {
   String _newSwapPath() =>
       '${_docs!.path}/swaps/swap_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
+  /// Checks that a swap can start and returns a fresh working folder.
+  Future<Directory> prepareVideoJob() async {
+    _requireModels();
+    if (!hasSource) throw SwapException('Choose a source face first.');
+    final dir = Directory('${_temp!.path}/video_job');
+    if (await dir.exists()) await dir.delete(recursive: true);
+    await dir.create(recursive: true);
+    return dir;
+  }
+
+  /// Moves a finished video and its thumbnail into the history.
+  Future<SwapRecord> addVideoResult({
+    required String videoFile,
+    required String thumbFile,
+    required int millis,
+    required int faces,
+  }) async {
+    final thumb = _newSwapPath();
+    final video = thumb.replaceAll('.jpg', '.mp4');
+    await File(thumbFile).copy(thumb);
+    await File(videoFile).copy(video);
+    final record = SwapRecord(
+      path: thumb,
+      time: DateTime.now(),
+      millis: millis,
+      faces: faces,
+      live: false,
+      videoPath: video,
+    );
+    history.insert(0, record);
+    await _saveHistory();
+    notifyListeners();
+    return record;
+  }
+
   /// Uses the largest face in the picked image as the face to swap in.
   Future<void> setSource(String pickedPath) async {
     _requireModels();
@@ -228,6 +271,8 @@ class AppState extends ChangeNotifier {
     history.remove(record);
     final file = File(record.path);
     if (await file.exists()) await file.delete();
+    final video = record.videoPath == null ? null : File(record.videoPath!);
+    if (video != null && await video.exists()) await video.delete();
     await _saveHistory();
     notifyListeners();
   }
