@@ -128,7 +128,8 @@ class FaceSwapper {
 
   Future<Float32List> _floats(OrtValue value) async {
     final data = await value.asFlattenedList();
-    if (data is Float32List) return data;
+    // Data from the plugin is read-only, so always work on a copy.
+    if (data is Float32List) return Float32List.fromList(data);
     final out = Float32List(data.length);
     for (var i = 0; i < data.length; i++) {
       out[i] = (data[i] as num).toDouble();
